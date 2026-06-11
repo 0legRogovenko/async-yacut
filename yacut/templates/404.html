@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}YaCut - страница не найдена{% endblock %}
+
+{% block content %}
+  <section class="container my-5 px-4 text-center">
+    <h1><span style="color:red">Ya</span>Cut</h1>
+    <h2>404 — страница не найдена</h2>
+    <p>Такой короткой ссылки или страницы не существует.</p>
+    <a href="{{ url_for('index_view') }}">Вернуться на главную</a>
+  </section>
+{% endblock %}
