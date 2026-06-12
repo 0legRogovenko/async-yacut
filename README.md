@@ -31,9 +31,8 @@ yacut/
 ├── __init__.py        # инициализация приложения, БД, миграций
 ├── settings.py        # конфигурация из переменных окружения
 ├── constants.py        # константы проекта
-├── models.py           # модель URLMap
+├── models.py           # модель URLMap (микро-ORM)
 ├── forms.py             # формы URLMapForm и ImageMapForm
-├── utils.py             # генерация уникального короткого id
 ├── views.py             # главная страница, /files, редирект
 ├── api_views.py         # REST API (/api/id/...)
 ├── error_handlers.py    # обработчики ошибок UI и API
@@ -51,8 +50,8 @@ postman_collection/         # коллекция запросов для Postman
 Клонировать репозиторий и перейти в него:
 
 ```bash
-git clone <ссылка на репозиторий>
-cd yacut
+git clone https://github.com/0legRogovenko/async-yacut.git
+cd async-yacut
 ```
 
 Создать и активировать виртуальное окружение:
@@ -99,8 +98,9 @@ flask db upgrade
 flask run
 ```
 
-Главная страница доступна на `http://127.0.0.1:5000/`, страница
-загрузки файлов — на `http://127.0.0.1:5000/files`.
+Главная страница доступна на
+[http://127.0.0.1:5000/](http://127.0.0.1:5000/), страница загрузки
+файлов — на [http://127.0.0.1:5000/files](http://127.0.0.1:5000/files).
 
 ## Тестирование
 
@@ -143,7 +143,7 @@ Content-Type: application/json
 ### Получить оригинальную ссылку
 
 ```
-GET /api/id/<short_id>/
+GET /api/id/<short>/
 ```
 
 Ответ `200 OK`:
@@ -157,4 +157,6 @@ GET /api/id/<short_id>/
 При ошибках API возвращает `400` или `404` с телом вида
 `{"message": "..."}`.
 
+## Автор
 
+Олег Роговенко — [GitHub](https://github.com/0legRogovenko)

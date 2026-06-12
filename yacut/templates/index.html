@@ -44,11 +44,6 @@
         <div class="col-sm">
         </div>
         <div class="col-sm">
-          {% with messages = get_flashed_messages() %}
-            {% for message in messages %}
-              <p class="text-center"><span style="color:red">{{ message }}</span></p>
-            {% endfor %}
-          {% endwith %}
           {% if short_link %}
             <h5 class="text-center">Ваша новая ссылка готова</h5>
             <p class="text-center"><a href="{{ short_link }}">{{ short_link }}</a></p>

@@ -1,43 +1,55 @@
 """Формы для главной страницы и страницы загрузки файлов."""
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired, Length, Optional, Regexp
 from flask_wtf.file import FileAllowed, MultipleFileField
+from wtforms import StringField, SubmitField, URLField
+from wtforms.validators import DataRequired, Length, Optional, Regexp
 
-from .constants import (
-    CUSTOM_ID_PATTERN, INVALID_ID_MESSAGE, MAX_CUSTOM_ID_LENGTH
-)
+from .constants import MAX_ORIGINAL_LENGTH, MAX_SHORT_LENGTH, SHORT_PATTERN
+from .models import INVALID_SHORT_MESSAGE
+from .settings import Config
+
+ORIGINAL_LINK_LABEL = 'Длинная ссылка'
+ORIGINAL_LINK_REQUIRED_MESSAGE = 'Обязательное поле'
+CUSTOM_ID_LABEL = 'Ваш вариант короткой ссылки'
+CREATE_BUTTON_LABEL = 'Создать'
+FILES_LABEL = 'Выбрать файл'
+UPLOAD_BUTTON_LABEL = 'Загрузить'
+ALLOWED_EXTENSIONS_MESSAGE = 'Допустимые расширения файлов: {}'
 
 
 class URLMapForm(FlaskForm):
     """Форма создания короткой ссылки на главной странице."""
 
-    original_link = StringField(
-        'Длинная ссылка',
-        validators=[DataRequired(message='Обязательное поле'),
-                    Length(1, 256)]
-    )
-    custom_id = StringField(
-        'Ваш вариант короткой ссылки',
+    original_link = URLField(
+        ORIGINAL_LINK_LABEL,
         validators=[
-            Optional(),
-            Length(max=MAX_CUSTOM_ID_LENGTH),
-            Regexp(CUSTOM_ID_PATTERN, message=INVALID_ID_MESSAGE),
+            DataRequired(message=ORIGINAL_LINK_REQUIRED_MESSAGE),
+            Length(max=MAX_ORIGINAL_LENGTH),
         ]
     )
-    submit = SubmitField('Создать')
+    custom_id = StringField(
+        CUSTOM_ID_LABEL,
+        validators=[
+            Optional(),
+            Length(max=MAX_SHORT_LENGTH),
+            Regexp(SHORT_PATTERN, message=INVALID_SHORT_MESSAGE),
+        ]
+    )
+    submit = SubmitField(CREATE_BUTTON_LABEL)
 
 
 class ImageMapForm(FlaskForm):
     """Форма загрузки файлов на странице /files."""
 
     files = MultipleFileField(
-        'Выбрать файл',
+        FILES_LABEL,
         validators=[
             FileAllowed(
-                ['jpg', 'jpeg', 'png', 'gif', 'bmp'],
-                message=('Файл не выбран')
+                Config.ALLOWED_EXTENSIONS,
+                message=ALLOWED_EXTENSIONS_MESSAGE.format(
+                    ', '.join(Config.ALLOWED_EXTENSIONS)
+                ),
             )
         ]
     )
-    submit = SubmitField('Загрузить')
+    submit = SubmitField(UPLOAD_BUTTON_LABEL)

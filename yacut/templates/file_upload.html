@@ -35,11 +35,6 @@
         <div class="col-sm">
         </div>
         <div class="col-sm">
-          {% with messages = get_flashed_messages() %}
-            {% for message in messages %}
-              <p class="text-center"><span style="color:red">{{ message }}</span></p>
-            {% endfor %}
-          {% endwith %}
           {% if files %}
             <h5 class="text-center">Ваши ссылки готовы</h5>
             <ul class="list-unstyled text-center">
