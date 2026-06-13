@@ -5,7 +5,7 @@ from flask import jsonify, request
 
 from . import app
 from .error_handlers import InvalidAPIUsage
-from .models import URLMap
+from .models import URLMap, URLMapError
 
 EMPTY_BODY_MESSAGE = 'Отсутствует тело запроса'
 URL_REQUIRED_MESSAGE = '"url" является обязательным полем!'
@@ -21,21 +21,20 @@ def api_create_id():
     if 'url' not in data:
         raise InvalidAPIUsage(URL_REQUIRED_MESSAGE)
     try:
-        url_map = URLMap.create(
+        short_link = URLMap.create(
             original=data['url'], short=data.get('custom_id')
-        )
-    except ValueError as error:
+        ).to_short_url()
+    except URLMapError as error:
         raise InvalidAPIUsage(str(error))
     return jsonify({
-        'url': url_map.original,
-        'short_link': url_map.to_short_url(),
+        'url': data['url'],
+        'short_link': short_link,
     }), HTTPStatus.CREATED
 
 
 @app.route('/api/id/<short>/', methods=['GET'])
 def api_get_url(short):
     """Получение оригинальной ссылки по короткому идентификатору."""
-    url_map = URLMap.get(short)
-    if url_map is None:
+    if (url_map := URLMap.get(short)) is None:
         raise InvalidAPIUsage(SHORT_NOT_FOUND_MESSAGE, HTTPStatus.NOT_FOUND)
     return jsonify({'url': url_map.original})

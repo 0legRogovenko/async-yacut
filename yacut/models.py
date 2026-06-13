@@ -17,18 +17,39 @@ from .constants import (
     SHORT_PATTERN,
 )
 
+INVALID_ORIGINAL_MESSAGE = 'Указанная ссылка слишком длинная'
+INVALID_SHORT_MESSAGE = 'Указано недопустимое имя для короткой ссылки'
 DUPLICATE_SHORT_MESSAGE = (
     'Предложенный вариант короткой ссылки уже существует.'
 )
-INVALID_SHORT_MESSAGE = 'Указано недопустимое имя для короткой ссылки'
 SHORT_GENERATION_ERROR_MESSAGE = (
-    'Не удалось сгенерировать уникальный короткий идентификатор '
-    'за {} попыток.'
-)
+    'Не удалось сгенерировать уникальный короткий идентификатор, '
+    'число попыток: {}.'
+).format(MAX_SHORT_GENERATION_ATTEMPTS)
+
+
+class URLMapError(Exception):
+    """Базовая ошибка операций с моделью URLMap."""
+
+
+class InvalidOriginalError(URLMapError):
+    """Указана недопустимая оригинальная ссылка."""
+
+
+class InvalidShortError(URLMapError):
+    """Указан недопустимый короткий идентификатор."""
+
+
+class DuplicateShortError(URLMapError):
+    """Короткий идентификатор уже занят или зарезервирован."""
+
+
+class ShortGenerationError(URLMapError):
+    """Не удалось сгенерировать уникальный короткий идентификатор."""
 
 
 class URLMap(db.Model):
-    """Соответствие короткого идентификатора оригинальной ссылке."""
+    """Модель коротких ссылок с методами для их создания и поиска."""
 
     id = db.Column(db.Integer, primary_key=True)
     original = db.Column(db.String(MAX_ORIGINAL_LENGTH), nullable=False)
@@ -37,7 +58,6 @@ class URLMap(db.Model):
 
     @staticmethod
     def get(short):
-        """Возвращает запись по короткому идентификатору или None."""
         return URLMap.query.filter_by(short=short).first()
 
     @staticmethod
@@ -52,28 +72,34 @@ class URLMap(db.Model):
             short = ''.join(choices(SHORT_CHARS, k=SHORT_LENGTH))
             if URLMap.is_available(short):
                 return short
-        raise RuntimeError(
-            SHORT_GENERATION_ERROR_MESSAGE.format(
-                MAX_SHORT_GENERATION_ATTEMPTS
-            )
-        )
+        raise ShortGenerationError(SHORT_GENERATION_ERROR_MESSAGE)
 
     @staticmethod
-    def create(original, short=None):
-        """Создаёт и сохраняет запись, при необходимости генерируя short."""
+    def create(original, short=None, validate_short=True,
+               validate_original=True, commit=True):
+        """Создаёт и сохраняет запись, при необходимости генерируя short.
+
+        Параметры `validate_short` и `validate_original` позволяют
+        пропустить проверку формата, если она уже выполнена формой.
+        Если `commit` равен False, запись добавляется в сессию без
+        сохранения - для пакетного создания записей одним коммитом.
+        """
+        if validate_original and len(original) > MAX_ORIGINAL_LENGTH:
+            raise InvalidOriginalError(INVALID_ORIGINAL_MESSAGE)
         if short:
-            if (
+            if validate_short and (
                 len(short) > MAX_SHORT_LENGTH
                 or not re.fullmatch(SHORT_PATTERN, short)
             ):
-                raise ValueError(INVALID_SHORT_MESSAGE)
+                raise InvalidShortError(INVALID_SHORT_MESSAGE)
             if not URLMap.is_available(short):
-                raise ValueError(DUPLICATE_SHORT_MESSAGE)
+                raise DuplicateShortError(DUPLICATE_SHORT_MESSAGE)
         else:
             short = URLMap.generate_short()
         url_map = URLMap(original=original, short=short)
         db.session.add(url_map)
-        db.session.commit()
+        if commit:
+            db.session.commit()
         return url_map
 
     def to_short_url(self):

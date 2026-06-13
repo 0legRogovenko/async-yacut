@@ -1,12 +1,11 @@
 """View-функции главной страницы, страницы загрузки файлов и редиректа."""
 from http import HTTPStatus
 
-import aiohttp
 from flask import abort, flash, redirect, render_template
 
-from . import app
+from . import app, db
 from .forms import ImageMapForm, URLMapForm
-from .models import URLMap
+from .models import URLMap, URLMapError
 from .yandexdisk import async_upload_file_to_yandex_disk
 
 UPLOAD_ERROR_MESSAGE = 'Не удалось загрузить файлы на Яндекс Диск.'
@@ -20,23 +19,23 @@ def index_view():
         return render_template('index.html', form=form)
 
     try:
-        url_map = URLMap.create(
-            original=form.original_link.data, short=form.custom_id.data
-        )
-    except ValueError as error:
+        short_link = URLMap.create(
+            original=form.original_link.data,
+            short=form.custom_id.data,
+            validate_short=False,
+            validate_original=False,
+        ).to_short_url()
+    except URLMapError as error:
         flash(str(error))
         return render_template('index.html', form=form)
 
-    return render_template(
-        'index.html', form=form, short_link=url_map.to_short_url()
-    )
+    return render_template('index.html', form=form, short_link=short_link)
 
 
 @app.route('/<short>')
 def redirect_view(short):
     """Перенаправление по короткой ссылке."""
-    url_map = URLMap.get(short)
-    if url_map is None:
+    if (url_map := URLMap.get(short)) is None:
         abort(HTTPStatus.NOT_FOUND)
     return redirect(url_map.original, code=HTTPStatus.FOUND)
 
@@ -51,15 +50,23 @@ async def file_upload_view():
     images = form.files.data
     try:
         urls = await async_upload_file_to_yandex_disk(images)
+    except Exception:
+        flash(UPLOAD_ERROR_MESSAGE)
+        return render_template('file_upload.html', form=form)
+
+    try:
         files = [
             {
                 'name': image.filename,
-                'link': URLMap.create(original=url).to_short_url(),
+                'link': URLMap.create(
+                    original=url, commit=False
+                ).to_short_url(),
             }
             for image, url in zip(images, urls)
         ]
-    except aiohttp.ClientError:
-        flash(UPLOAD_ERROR_MESSAGE)
+        db.session.commit()
+    except URLMapError as error:
+        flash(str(error))
         return render_template('file_upload.html', form=form)
 
     return render_template('file_upload.html', form=form, files=files)

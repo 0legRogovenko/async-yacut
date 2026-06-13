@@ -1,4 +1,5 @@
 """Константы проекта."""
+import re
 import string
 
 # Длина автоматически генерируемого короткого идентификатора
@@ -6,7 +7,7 @@ SHORT_LENGTH = 6
 # Допустимые символы короткого идентификатора
 SHORT_CHARS = string.digits + string.ascii_letters
 # Регулярное выражение для проверки короткого идентификатора
-SHORT_PATTERN = r'^[{}]+$'.format(SHORT_CHARS)
+SHORT_PATTERN = r'^[{}]+$'.format(re.escape(SHORT_CHARS))
 # Максимальная длина короткого идентификатора (в т.ч. пользовательского)
 MAX_SHORT_LENGTH = 16
 # Максимальная длина оригинальной ссылки

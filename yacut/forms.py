@@ -14,7 +14,9 @@ CUSTOM_ID_LABEL = 'Ваш вариант короткой ссылки'
 CREATE_BUTTON_LABEL = 'Создать'
 FILES_LABEL = 'Выбрать файл'
 UPLOAD_BUTTON_LABEL = 'Загрузить'
-ALLOWED_EXTENSIONS_MESSAGE = 'Допустимые расширения файлов: {}'
+ALLOWED_EXTENSIONS_MESSAGE = 'Допустимые расширения файлов: {}'.format(
+    ', '.join(Config.ALLOWED_EXTENSIONS)
+)
 
 
 class URLMapForm(FlaskForm):
@@ -46,9 +48,7 @@ class ImageMapForm(FlaskForm):
         validators=[
             FileAllowed(
                 Config.ALLOWED_EXTENSIONS,
-                message=ALLOWED_EXTENSIONS_MESSAGE.format(
-                    ', '.join(Config.ALLOWED_EXTENSIONS)
-                ),
+                message=ALLOWED_EXTENSIONS_MESSAGE,
             )
         ]
     )
