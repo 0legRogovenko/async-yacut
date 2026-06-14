@@ -54,7 +54,7 @@ async def file_upload_view():
     try:
         urls = await async_upload_files_to_yandex_disk(images)
     except Exception as error:
-        flash(f'{UPLOAD_ERROR_MESSAGE} {error}')
+        flash('{} {}'.format(UPLOAD_ERROR_MESSAGE, error))
         return render_template('file_upload.html', form=form)
 
     try:

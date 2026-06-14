@@ -19,7 +19,7 @@ from .constants import (
 
 INVALID_ORIGINAL_MESSAGE = (
     'Указанная ссылка превышает максимально допустимую длину '
-    f'({MAX_ORIGINAL_LENGTH} симв.).'
+    f'({MAX_ORIGINAL_LENGTH}).'
 )
 INVALID_SHORT_MESSAGE = 'Указано недопустимое имя для короткой ссылки'
 DUPLICATE_SHORT_MESSAGE = (
@@ -34,13 +34,13 @@ SHORT_GENERATION_ERROR_MESSAGE = (
 class URLMap(db.Model):
     """Модель коротких ссылок с методами для их создания и поиска."""
 
-    class Error(Exception):
-        """Ошибка операций с моделью URLMap."""
-
     id = db.Column(db.Integer, primary_key=True)
     original = db.Column(db.String(MAX_ORIGINAL_LENGTH), nullable=False)
     short = db.Column(db.String(MAX_SHORT_LENGTH), nullable=False)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+
+    class Error(Exception):
+        """Ошибка операций с моделью URLMap."""
 
     @staticmethod
     def get(short):
@@ -72,15 +72,17 @@ class URLMap(db.Model):
         """
         if validate_original and len(original) > MAX_ORIGINAL_LENGTH:
             raise URLMap.Error(INVALID_ORIGINAL_MESSAGE)
-        short = short or URLMap.generate_short()
-        if validate_short and (
-            len(short) > MAX_SHORT_LENGTH
-            or not re.fullmatch(SHORT_PATTERN, short)
-        ):
-            raise URLMap.Error(INVALID_SHORT_MESSAGE)
-        if not URLMap.is_available(short):
-            raise URLMap.Error(DUPLICATE_SHORT_MESSAGE)
-        url_map = URLMap(original=original, short=short)
+        if short:
+            if validate_short and (
+                len(short) > MAX_SHORT_LENGTH
+                or not re.fullmatch(SHORT_PATTERN, short)
+            ):
+                raise URLMap.Error(INVALID_SHORT_MESSAGE)
+            if not URLMap.is_available(short):
+                raise URLMap.Error(DUPLICATE_SHORT_MESSAGE)
+        url_map = URLMap(
+            original=original, short=short or URLMap.generate_short()
+        )
         db.session.add(url_map)
         if commit:
             db.session.commit()
