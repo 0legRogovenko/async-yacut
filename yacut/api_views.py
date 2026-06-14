@@ -4,6 +4,7 @@ from http import HTTPStatus
 from flask import jsonify, request
 
 from . import app
+from .constants import REDIRECT_VIEW_ENDPOINT
 from .error_handlers import InvalidAPIUsage
 from .models import URLMap, URLMapError
 
@@ -23,7 +24,7 @@ def api_create_id():
     try:
         short_link = URLMap.create(
             original=data['url'], short=data.get('custom_id')
-        ).to_short_url()
+        ).to_short_url(REDIRECT_VIEW_ENDPOINT)
     except URLMapError as error:
         raise InvalidAPIUsage(str(error))
     return jsonify({

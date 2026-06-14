@@ -10,22 +10,24 @@ from .constants import (
     MAX_ORIGINAL_LENGTH,
     MAX_SHORT_GENERATION_ATTEMPTS,
     MAX_SHORT_LENGTH,
-    REDIRECT_VIEW_ENDPOINT,
     RESERVED_SHORTS,
     SHORT_CHARS,
     SHORT_LENGTH,
     SHORT_PATTERN,
 )
 
-INVALID_ORIGINAL_MESSAGE = 'Указанная ссылка слишком длинная'
+INVALID_ORIGINAL_MESSAGE = (
+    'Указанная ссылка превышает максимальную длину '
+    f'({MAX_ORIGINAL_LENGTH} символов).'
+)
 INVALID_SHORT_MESSAGE = 'Указано недопустимое имя для короткой ссылки'
 DUPLICATE_SHORT_MESSAGE = (
     'Предложенный вариант короткой ссылки уже существует.'
 )
 SHORT_GENERATION_ERROR_MESSAGE = (
-    'Не удалось сгенерировать уникальный короткий идентификатор, '
-    'число попыток: {}.'
-).format(MAX_SHORT_GENERATION_ATTEMPTS)
+    'Не удалось сгенерировать уникальный короткий идентификатор. '
+    f'Превышено максимальное число попыток ({MAX_SHORT_GENERATION_ATTEMPTS}).'
+)
 
 
 class URLMapError(Exception):
@@ -102,8 +104,6 @@ class URLMap(db.Model):
             db.session.commit()
         return url_map
 
-    def to_short_url(self):
-        """Возвращает абсолютный урл короткой ссылки."""
-        return url_for(
-            REDIRECT_VIEW_ENDPOINT, short=self.short, _external=True
-        )
+    def to_short_url(self, endpoint):
+        """Возвращает абсолютный урл короткой ссылки для указанной ручки."""
+        return url_for(endpoint, short=self.short, _external=True)

@@ -28,7 +28,7 @@ async def ensure_disk_folder_exists(session):
         pass
 
 
-async def async_upload_file_to_yandex_disk(images):
+async def async_upload_files_to_yandex_disk(images):
     """Асинхронная загрузка файлов на Яндекс Диск."""
     async with aiohttp.ClientSession() as session:
         await ensure_disk_folder_exists(session)

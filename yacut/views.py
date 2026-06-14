@@ -3,10 +3,11 @@ from http import HTTPStatus
 
 from flask import abort, flash, redirect, render_template
 
-from . import app, db
+from . import app
+from .constants import REDIRECT_VIEW_ENDPOINT
 from .forms import ImageMapForm, URLMapForm
 from .models import URLMap, URLMapError
-from .yandexdisk import async_upload_file_to_yandex_disk
+from .yandexdisk import async_upload_files_to_yandex_disk
 
 UPLOAD_ERROR_MESSAGE = 'Не удалось загрузить файлы на Яндекс Диск.'
 
@@ -24,7 +25,7 @@ def index_view():
             short=form.custom_id.data,
             validate_short=False,
             validate_original=False,
-        ).to_short_url()
+        ).to_short_url(REDIRECT_VIEW_ENDPOINT)
     except URLMapError as error:
         flash(str(error))
         return render_template('index.html', form=form)
@@ -49,24 +50,26 @@ async def file_upload_view():
 
     images = form.files.data
     try:
-        urls = await async_upload_file_to_yandex_disk(images)
+        urls = await async_upload_files_to_yandex_disk(images)
     except Exception:
         flash(UPLOAD_ERROR_MESSAGE)
         return render_template('file_upload.html', form=form)
 
     try:
-        files = [
-            {
-                'name': image.filename,
-                'link': URLMap.create(
-                    original=url, commit=False
-                ).to_short_url(),
-            }
-            for image, url in zip(images, urls)
-        ]
-        db.session.commit()
+        return render_template(
+            'file_upload.html',
+            form=form,
+            files=[
+                {
+                    'name': image.filename,
+                    'link': URLMap.create(
+                        original=url,
+                        commit=(i == len(images) - 1),
+                    ).to_short_url(REDIRECT_VIEW_ENDPOINT),
+                }
+                for i, (image, url) in enumerate(zip(images, urls))
+            ],
+        )
     except URLMapError as error:
         flash(str(error))
         return render_template('file_upload.html', form=form)
-
-    return render_template('file_upload.html', form=form, files=files)
