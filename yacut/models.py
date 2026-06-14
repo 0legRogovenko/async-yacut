@@ -10,6 +10,7 @@ from .constants import (
     MAX_ORIGINAL_LENGTH,
     MAX_SHORT_GENERATION_ATTEMPTS,
     MAX_SHORT_LENGTH,
+    REDIRECT_VIEW_ENDPOINT,
     RESERVED_SHORTS,
     SHORT_CHARS,
     SHORT_LENGTH,
@@ -17,8 +18,8 @@ from .constants import (
 )
 
 INVALID_ORIGINAL_MESSAGE = (
-    'Указанная ссылка превышает максимальную длину '
-    f'({MAX_ORIGINAL_LENGTH} символов).'
+    'Указанная ссылка превышает максимально допустимую длину '
+    f'({MAX_ORIGINAL_LENGTH} симв.).'
 )
 INVALID_SHORT_MESSAGE = 'Указано недопустимое имя для короткой ссылки'
 DUPLICATE_SHORT_MESSAGE = (
@@ -30,28 +31,11 @@ SHORT_GENERATION_ERROR_MESSAGE = (
 )
 
 
-class URLMapError(Exception):
-    """Базовая ошибка операций с моделью URLMap."""
-
-
-class InvalidOriginalError(URLMapError):
-    """Указана недопустимая оригинальная ссылка."""
-
-
-class InvalidShortError(URLMapError):
-    """Указан недопустимый короткий идентификатор."""
-
-
-class DuplicateShortError(URLMapError):
-    """Короткий идентификатор уже занят или зарезервирован."""
-
-
-class ShortGenerationError(URLMapError):
-    """Не удалось сгенерировать уникальный короткий идентификатор."""
-
-
 class URLMap(db.Model):
     """Модель коротких ссылок с методами для их создания и поиска."""
+
+    class Error(Exception):
+        """Ошибка операций с моделью URLMap."""
 
     id = db.Column(db.Integer, primary_key=True)
     original = db.Column(db.String(MAX_ORIGINAL_LENGTH), nullable=False)
@@ -74,7 +58,7 @@ class URLMap(db.Model):
             short = ''.join(choices(SHORT_CHARS, k=SHORT_LENGTH))
             if URLMap.is_available(short):
                 return short
-        raise ShortGenerationError(SHORT_GENERATION_ERROR_MESSAGE)
+        raise URLMap.Error(SHORT_GENERATION_ERROR_MESSAGE)
 
     @staticmethod
     def create(original, short=None, validate_short=True,
@@ -87,23 +71,23 @@ class URLMap(db.Model):
         сохранения - для пакетного создания записей одним коммитом.
         """
         if validate_original and len(original) > MAX_ORIGINAL_LENGTH:
-            raise InvalidOriginalError(INVALID_ORIGINAL_MESSAGE)
-        if short:
-            if validate_short and (
-                len(short) > MAX_SHORT_LENGTH
-                or not re.fullmatch(SHORT_PATTERN, short)
-            ):
-                raise InvalidShortError(INVALID_SHORT_MESSAGE)
-            if not URLMap.is_available(short):
-                raise DuplicateShortError(DUPLICATE_SHORT_MESSAGE)
-        else:
-            short = URLMap.generate_short()
+            raise URLMap.Error(INVALID_ORIGINAL_MESSAGE)
+        short = short or URLMap.generate_short()
+        if validate_short and (
+            len(short) > MAX_SHORT_LENGTH
+            or not re.fullmatch(SHORT_PATTERN, short)
+        ):
+            raise URLMap.Error(INVALID_SHORT_MESSAGE)
+        if not URLMap.is_available(short):
+            raise URLMap.Error(DUPLICATE_SHORT_MESSAGE)
         url_map = URLMap(original=original, short=short)
         db.session.add(url_map)
         if commit:
             db.session.commit()
         return url_map
 
-    def to_short_url(self, endpoint):
-        """Возвращает абсолютный урл короткой ссылки для указанной ручки."""
-        return url_for(endpoint, short=self.short, _external=True)
+    def to_short_url(self):
+        """Возвращает абсолютный урл короткой ссылки."""
+        return url_for(
+            REDIRECT_VIEW_ENDPOINT, short=self.short, _external=True
+        )
